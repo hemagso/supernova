@@ -28,6 +28,7 @@ pip-wheel-metadata/
 share/python-wheels/
 *.tar.gz
 *.whl
+poetry.lock
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
