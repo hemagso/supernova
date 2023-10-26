@@ -17,6 +17,8 @@ jobs:
         with:
           python-version: 3.12
       - uses: py-actions/flake8@v2
+        with:
+          plugins: flake8-pyproject
   mypy:
     name: Type check with mypy
     runs-on: ubuntu-latest
