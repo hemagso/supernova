@@ -1,6 +1,6 @@
 name: bacen
 description: Feature set containing data related to debt
-mnemonic: bc
+mnemonic: bci
 entity: individual
 features:
   - name: vl_rotmer_med_6m_bc
@@ -8,7 +8,7 @@ features:
     type: DECIMAL
     domain: 
       - type: RANGE
-        value: "[0, +inf]"
+        value: "(0, +inf]"
         description: Values corresponding to the debt amount
       - type: VALUE
         value: -1

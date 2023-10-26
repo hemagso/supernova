@@ -1,0 +1,16 @@
+entities:
+  - name: individual
+    description: Entity representing a natural person or corporation
+    keys:
+      - pk_riznumdoc_xx
+      - pk_tpp_xx
+  - name: account
+    description: An account within the bank
+    keys:
+      - pk_branchid_xx
+      - pk_accountid_xx
+  - name: conglomerate
+    description: A conglomerate of companies
+    keys:
+      - pk_conglomerateid_xx
+time_key: pk_datref_xx
