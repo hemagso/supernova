@@ -1,9 +1,10 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError, root_validator, validator
 from typing import Literal, Annotated
 from enum import Enum
 import re
-from typing import Any
+import pathlib
+import yaml
 
 
 class ParquetLogicalTypes(str, Enum):
@@ -42,6 +43,32 @@ class FeatureStore(BaseModel):
     time_key: str
     feature_sets: list[FeatureSet]
 
+    @validator("feature_sets", pre=True, each_item=True)
+    def set_feature_set_entity(cls, feature_set: dict, values: dict) -> FeatureSet:
+        FeatureSet._available_entities = values["entities"]
+        return FeatureSet(**feature_set)
+
+    @staticmethod
+    def from_folder(path: pathlib.Path | str) -> FeatureStore:
+        if not isinstance(path, pathlib.Path):
+            path = pathlib.Path(path)
+
+        store_file = path / "store.yml"
+        with open(store_file, "r", encoding="utf-8") as file:
+            data = yaml.safe_load(file)
+        data["feature_sets"] = []
+        for set_file in path.glob("feature_sets/*.yml"):
+            with open(set_file, "r", encoding="utf-8") as file:
+                set_data = yaml.safe_load(file)
+                data["feature_sets"].append(set_data)
+
+        return FeatureStore(**data)
+
+    @staticmethod
+    def read_yaml(path: pathlib.Path) -> dict:
+        with open(path, "r", encoding="utf-8") as file:
+            return yaml.safe_load(file)
+
 
 class FeatureSet(BaseModel):
     """This class represents the metadata for a table store within the Feature Store."""
@@ -52,6 +79,18 @@ class FeatureSet(BaseModel):
     tags: list[str] = Field(default=[])
     entity: Entity
     features: list[Feature]
+
+    _available_entities: list[Entity]
+
+    @root_validator(pre=True)
+    def set_entity(cls, values: dict, **kwargs):
+        entity = next(
+            filter(lambda e: e.name == values["entity"], cls._available_entities), None
+        )
+        if entity is None:
+            raise ValueError(f"Entity {values["entity"]} not found in the store. Available entities: {[e.name for e in cls._available_entities]}")
+        values["entity"] = entity
+        return values
 
 
 class Feature(BaseModel):
