@@ -8,6 +8,7 @@ import yaml
 
 
 class ParquetLogicalTypes(str, Enum):
+    """This class represents the logical types of a parquet file"""
     STRING = "STRING"
     ENUM = "ENUM"
     UUID = "UUID"
@@ -33,6 +34,17 @@ class ParquetLogicalTypes(str, Enum):
 
 
 class Entity(BaseModel):
+    """This class represents the metadata for an entity within the Feature Store. An
+    entity identifies what type of subject is represented by a row in an specific feature
+    set. For example, if every row in a feature set contains data about a given customer
+    this feature set should have an entity called "customer".
+
+    Attributes:
+        name: The name of the entity.
+        description: A description of the entity.
+        keys: A list of the names of the columns that uniquely identify the entity.
+    
+    """
     name: str
     description: str
     keys: list[str]
@@ -42,7 +54,17 @@ def set_feature_set_entity(feature_set: dict, info: ValidationInfo) -> FeatureSe
     FeatureSet._available_entities = info.data["entities"]
     return FeatureSet(**feature_set)
 
+
 class FeatureStore(BaseModel):
+    """This calss represents a feature store. A feature store is a collection of tables
+    that contain pre-calculated information related to a set of standardized entities, 
+    such as customers, products, etc.
+    
+    Attributes:
+        entities: A list of entities that are supported by the feature store.
+        time_key: The name of the column that contains the timestamp of the data.
+        feature_sets: A list of feature sets that are available in the feature store.
+    """
     entities: list[Entity]
     time_key: str
     feature_sets: list[Annotated[FeatureSet, BeforeValidator(set_feature_set_entity)]]
