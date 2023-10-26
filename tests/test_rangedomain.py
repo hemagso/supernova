@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 from supernova.metadata import RangeDomain
 
 # Assuming the Interval class and parse_interval_string function are in a module named interval_parser
@@ -36,15 +35,15 @@ def test_invalid_intervals_parse(value, expected):
 def test_valid_intervals():
     interval = RangeDomain(value="[1, 3]", description="Test range domain")
     assert interval.start == 1
-    assert interval.include_start == True
+    assert interval.include_start is True
     assert interval.end == 3
-    assert interval.include_end == True
+    assert interval.include_end is True
 
     interval = RangeDomain(value="(1, 3]", description="Test range domain")
     assert interval.start == 1
-    assert interval.include_start == False
+    assert interval.include_start is False
     assert interval.end == 3
-    assert interval.include_end == True
+    assert interval.include_end is True
 
 
 # Execute tests

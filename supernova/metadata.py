@@ -43,7 +43,6 @@ class Entity(BaseModel):
         name: The name of the entity.
         description: A description of the entity.
         keys: A list of the names of the columns that uniquely identify the entity.
-    
     """
     name: str
     description: str
@@ -57,9 +56,9 @@ def set_feature_set_entity(feature_set: dict, info: ValidationInfo) -> FeatureSe
 
 class FeatureStore(BaseModel):
     """This calss represents a feature store. A feature store is a collection of tables
-    that contain pre-calculated information related to a set of standardized entities, 
+    that contain pre-calculated information related to a set of standardized entities,
     such as customers, products, etc.
-    
+
     Attributes:
         entities: A list of entities that are supported by the feature store.
         time_key: The name of the column that contains the timestamp of the data.
@@ -109,7 +108,10 @@ class FeatureSet(BaseModel):
             filter(lambda e: e.name == values["entity"], cls._available_entities), None
         )
         if entity is None:
-            raise ValueError(f"Entity {values["entity"]} not found in the store. Available entities: {[e.name for e in cls._available_entities]}")
+            raise ValueError(
+                f"Entity {values["entity"]} not found in the store. "
+                f"Available entities: {[e.name for e in cls._available_entities]}"
+            )
         values["entity"] = entity
         return values
 

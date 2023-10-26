@@ -5,9 +5,6 @@ from pyspark.sql.functions import (
     row_number,
     min,
     max,
-    lit,
-    date_add,
-    rand,
 )
 from pyspark.sql.window import Window
 from datetime import timedelta
