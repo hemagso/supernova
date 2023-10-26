@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field, ValidationError, root_validator, field_validator, model_validator, ValidationInfo, BeforeValidator
+from pydantic import BaseModel, Field, model_validator, ValidationInfo, BeforeValidator
 from typing import Literal, Annotated
 from enum import Enum
 import re
@@ -81,8 +81,8 @@ class FeatureSet(BaseModel):
 
     _available_entities: list[Entity]
 
-    @root_validator(pre=True)
-    def set_entity(cls, values: dict, **kwargs):
+    @model_validator(mode="before")
+    def set_entity(cls, values: dict):
         entity = next(
             filter(lambda e: e.name == values["entity"], cls._available_entities), None
         )
