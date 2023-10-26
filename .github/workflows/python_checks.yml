@@ -23,9 +23,9 @@ jobs:
     name: Type check with mypy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Type check with mypy
-        uses: py-actions/mypy@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          args: --ignore-missing-imports
+          python-version: 3.12
+      - run: poetry run mypy supernova
       
