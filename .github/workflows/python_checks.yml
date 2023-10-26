@@ -9,21 +9,21 @@ on:
 
 jobs:
   flake8:
-    name: Lint with Flake8
+    name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Lint with flake8
-        uses: py-actions/py-flake8@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          args: --max-line-length=120
+          python-version: 3.12
+      - uses: py-actions/flake8@v2
   mypy:
     name: Type check with mypy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Type check with mypy
-        uses: py-actions/py-mypy@v1
+        uses: py-actions/mypy@v1
         with:
           args: --ignore-missing-imports
       
