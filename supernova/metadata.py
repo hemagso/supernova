@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field, ValidationError, root_validator, validator
+from pydantic import BaseModel, Field, ValidationError, root_validator, field_validator, model_validator, ValidationInfo, BeforeValidator
 from typing import Literal, Annotated
 from enum import Enum
 import re
@@ -38,15 +38,14 @@ class Entity(BaseModel):
     keys: list[str]
 
 
+def set_feature_set_entity(feature_set: dict, info: ValidationInfo) -> FeatureSet:
+    FeatureSet._available_entities = info.data["entities"]
+    return FeatureSet(**feature_set)
+
 class FeatureStore(BaseModel):
     entities: list[Entity]
     time_key: str
-    feature_sets: list[FeatureSet]
-
-    @validator("feature_sets", pre=True, each_item=True)
-    def set_feature_set_entity(cls, feature_set: dict, values: dict) -> FeatureSet:
-        FeatureSet._available_entities = values["entities"]
-        return FeatureSet(**feature_set)
+    feature_sets: list[Annotated[FeatureSet, BeforeValidator(set_feature_set_entity)]]
 
     @staticmethod
     def from_folder(path: pathlib.Path | str) -> FeatureStore:
