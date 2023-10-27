@@ -27,6 +27,6 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.12
-      - run: pipx install poetry
+      - uses: snok/install-poetry@v1
       - run: poetry run mypy supernova
       
