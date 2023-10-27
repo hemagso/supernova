@@ -5,7 +5,7 @@ from enum import Enum
 import re
 import pathlib
 import yaml
-
+from .query import Query
 
 class ParquetLogicalTypes(str, Enum):
     """This class represents the logical types of a parquet file"""
@@ -83,6 +83,20 @@ class FeatureStore(BaseModel):
                 data["feature_sets"].append(set_data)
 
         return FeatureStore(**data)
+    
+    def query(self, query: list[str]) -> Query:
+        return Query(self, query)
+    
+    def get_feature_set(self, mnemonic: str) -> FeatureSet:
+        feature_set = next(
+            filter(lambda s: s.mnemonic == mnemonic, self.feature_sets), None
+        )
+        if feature_set is None:
+            raise ValueError(
+                f"Feature set {mnemonic} not found in the store. "
+                f"Available feature sets: {[s.mnemonic for s in self.feature_sets]}"
+            )
+        return feature_set
 
     @staticmethod
     def read_yaml(path: pathlib.Path) -> dict:
@@ -95,12 +109,16 @@ class FeatureSet(BaseModel):
 
     name: str
     description: str
+    path: str
     mnemonic: str
     tags: list[str] = Field(default=[])
     entity: Entity
     features: list[Feature]
 
     _available_entities: list[Entity]
+
+    def __hash__(self):
+        return hash(self.mnemonic)
 
     @model_validator(mode="before")
     def set_entity(cls, values: dict):

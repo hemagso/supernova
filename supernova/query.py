@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import (
     col,
@@ -9,6 +10,43 @@ from pyspark.sql.functions import (
 from pyspark.sql.window import Window
 from datetime import timedelta
 from functools import reduce
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .metadata import FeatureStore, FeatureSet, Feature
+import re
+
+
+class Query:
+    def __init__(self, store: FeatureStore, query: list[str]):
+        self.store = store
+        self.specs = self.parse(query)
+
+    def parse_set(self, item: str) -> tuple[FeatureSet, str]:
+        set_mnemonic, feature_spec = item.split(":")
+        feature_set = self.store.get_feature_set(set_mnemonic)
+        return feature_set, feature_spec
+
+    def parse_feature(self, feature_set, feature_spec: str) -> list[Feature]:
+        if feature_spec == "*":
+            return feature_set.features
+        if re.match(r"^\/.*\/$", feature_spec):
+            pattern = re.compile(feature_spec)
+            return list(filter(lambda f: pattern.match(f.name), feature_set.features))
+        return [next(filter(lambda f: f.name == feature_spec, feature_set.features))]
+
+    def parse(self, query: list[str]) -> list[tuple[FeatureSet, list[Feature]]]:
+        specs_raw = [self.parse_set(item) for item in query]
+        specs_parse = [
+            (feature_set, self.parse_feature(feature_set, feature_spec))
+            for feature_set, feature_spec in specs_raw
+        ]
+        ans: dict[FeatureSet, list[Feature]] = {}
+        for feature_set, features in specs_parse:
+            if feature_set.mnemonic not in ans:
+                ans[feature_set] = []
+            ans[feature_set] += features
+        return list(ans.items())
 
 
 def filter_time_window(

@@ -1,10 +1,21 @@
 name: bacen
 description: Feature set containing data related to debt
 mnemonic: bci
+path: data/parquet/feature_a_df
 entity: individual
 features:
-  - name: vl_rotmer_med_6m_bc
+  - name: feature_a
     description: Average monthly revolving debt in the last 6 months
+    type: DECIMAL
+    domain: 
+      - type: RANGE
+        value: "(0, +inf]"
+        description: Values corresponding to the debt amount
+      - type: VALUE
+        value: -1
+        description: Customer don't have any revolving debt
+  - name: feature_b
+    description: Average monthly revolving debt in the last 3 months
     type: DECIMAL
     domain: 
       - type: RANGE
