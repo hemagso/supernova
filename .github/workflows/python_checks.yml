@@ -38,4 +38,24 @@ jobs:
         run: poetry install --no-interaction --no-root
       - name: Run mypy
         run: poetry run mypy supernova
-      
+  pytest:
+    name: Run tests with pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - uses: snok/install-poetry@v1
+      - uses: actions/cache@v3
+        id: cached-dependencies
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install dependencies
+        if: steps.cached-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+      - name: Install main package
+        run: poetry install --no-interaction
+      - name: Run tests
+        run: poetry run pytest
