@@ -30,10 +30,8 @@ class Query:
     def parse_feature(self, feature_set, feature_spec: str) -> list[Feature]:
         if feature_spec == "*":
             return feature_set.features
-        if re.match(r"^\/.*\/$", feature_spec):
-            pattern = re.compile(feature_spec)
-            return list(filter(lambda f: pattern.match(f.name), feature_set.features))
-        return [next(filter(lambda f: f.name == feature_spec, feature_set.features))]
+        pattern = re.compile(feature_spec)
+        return list(filter(lambda f: pattern.match(f.name), feature_set.features))
 
     def parse(self, query: list[str]) -> list[tuple[FeatureSet, list[Feature]]]:
         specs_raw = [self.parse_set(item) for item in query]
@@ -46,7 +44,11 @@ class Query:
             if feature_set.mnemonic not in ans:
                 ans[feature_set] = []
             ans[feature_set] += features
-        return list(ans.items())
+        return list(
+            (feature_set, features)
+            for feature_set, features in ans.items()
+            if len(features) > 0
+        )
 
     def execute(
         self, spark: SparkSession, pop_path: str, pop_date_field: str
