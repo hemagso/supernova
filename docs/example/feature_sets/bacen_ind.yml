@@ -3,6 +3,7 @@ description: Feature set containing data related to debt
 mnemonic: bci
 path: data/parquet/feature_a_df
 entity: individual
+date_field: calculation_date
 features:
   - name: feature_a
     description: Average monthly revolving debt in the last 6 months
@@ -21,6 +22,16 @@ features:
       - type: RANGE
         value: "(0, +inf]"
         description: Values corresponding to the debt amount
+      - type: VALUE
+        value: -1
+        description: Customer don't have any revolving debt
+  - name: feature_c
+    description: Number of months that the revolving debt exceeded 50% of the customer's income over the last 6 months
+    type: UINT8
+    domain:
+      - type: RANGE
+        value: "[0, 6]"
+        description: Number of months
       - type: VALUE
         value: -1
         description: Customer don't have any revolving debt

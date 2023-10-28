@@ -2,8 +2,7 @@ entities:
   - name: individual
     description: Entity representing a natural person or corporation
     keys:
-      - pk_riznumdoc_xx
-      - pk_tpp_xx
+      - entity_id
   - name: account
     description: An account within the bank
     keys:

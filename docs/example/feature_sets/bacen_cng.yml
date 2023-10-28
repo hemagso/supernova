@@ -3,6 +3,7 @@ description: Feature set containing data related to debt
 mnemonic: bcc
 path: data/parquet/feature_b_df
 entity: conglomerate
+date_field: calculation_date
 features:
   - name: feature_d
     description: Average monthly revolving debt in the last 6 months

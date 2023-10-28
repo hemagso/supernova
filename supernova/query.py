@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pyspark.sql import DataFrame
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import (
     col,
     datediff,
@@ -48,9 +48,44 @@ class Query:
             ans[feature_set] += features
         return list(ans.items())
 
+    def execute(
+        self, spark: SparkSession, pop_path: str, pop_date_field: str
+    ) -> DataFrame:
+        # Loading all dataframes
+        population_df = spark.read.parquet(pop_path)
+        feature_dfs = {
+            feature_set.mnemonic: spark.read.parquet(feature_set.path)
+            for feature_set, _ in self.specs
+        }
+
+        # Getting time range
+        min_date, max_date = get_time_window(population_df, 30, pop_date_field)
+        queries = {
+            name: query_feature_set(
+                population_df,
+                pop_date_field,
+                feature_df,
+                feature_set.date_field,
+                feature_set.entity.keys,
+                30,
+                min_date,
+                max_date,
+                [f.name for f in features],
+                mnemonic=name,
+            )
+            for (feature_set, features), (name, feature_df) in zip(
+                self.specs, feature_dfs.items()
+            )
+        }
+
+        all_dfs = [population_df] + list(queries.values())
+        return reduce(
+            lambda df1, df2: df1.join(df2, on=["entity_id", pop_date_field]), all_dfs
+        )
+
 
 def filter_time_window(
-    feature_df: DataFrame, min_date: str, max_date: str
+    feature_df: DataFrame, min_date: str, max_date: str, set_date_field: str
 ) -> DataFrame:
     """This function filters a dataframe to a time range
 
@@ -58,49 +93,57 @@ def filter_time_window(
         feature_df (DataFrame): The dataframe to filter
         min_date (str): The minimum date to filter
         max_date (str): The maximum date to filter
+        set_date_field (str): The name of the date field
 
     Returns:
         DataFrame: The dataframe filtered to the time range
     """
     return feature_df.filter(
-        (col("calculation_date") >= min_date) & (col("calculation_date") <= max_date)
+        (col(set_date_field) >= min_date) & (col(set_date_field) <= max_date)
     )
 
 
-def get_time_window(population_df: DataFrame, max_lag: int) -> tuple[str, str]:
+def get_time_window(
+    population_df: DataFrame, max_lag: int, pop_date_field: str
+) -> tuple[str, str]:
     """This function calculates the time window for a feature set query
 
     Args:
         population_df (DataFrame): The population dataframe
         max_lag (int): The maximum lag to consider
+        pop_date_field (str): The name of the date field
 
     Returns:
         tuple[str, str]: The minimum and maximum dates for the time window
     """
     range_df = population_df.agg(
-        min("observation_date").alias("min_date"),
-        max("observation_date").alias("max_date"),
+        min(pop_date_field).alias("min_date"),
+        max(pop_date_field).alias("max_date"),
     ).collect()[0]
     min_date = range_df.min_date - timedelta(days=max_lag)
     max_date = range_df.max_date + timedelta(days=max_lag)
     return min_date, max_date
 
 
-def add_mnemonic(df: DataFrame, mnemonic: str) -> DataFrame:
+def add_mnemonic(
+    df: DataFrame, mnemonic: str, entity_keys: list[str], pop_date_field: str
+) -> DataFrame:
     """This functions add a mnemonic prefix to all fields in a dataframe but the
     entity key and observation date
 
     Args:
         df (DataFrame): The dataframe to add the mnemonic to
         mnemonic (str): The mnemonic to add
+        entity_keys (list[str]): The entity keys
+        pop_date_field (str): The name of the date field
 
     Returns:
         DataFrame: The dataframe with the mnemonic added
     """
     return df.select(
         [
-            col("entity_id"),
-            col("observation_date"),
+            *[col(k) for k in entity_keys],
+            col(pop_date_field),
             *[
                 col(field.name).alias(f"{mnemonic}_{field.name}")
                 for field in df.schema.fields
@@ -112,7 +155,10 @@ def add_mnemonic(df: DataFrame, mnemonic: str) -> DataFrame:
 
 def query_feature_set(
     population_df: DataFrame,
+    pop_date_field: str,
     feature_df: DataFrame,
+    set_date_field: str,
+    entity_keys: list[str],
     max_lag: int,
     min_date: str,
     max_date: str,
@@ -123,7 +169,10 @@ def query_feature_set(
 
     Args:
         population_df (DataFrame): The population dataframe
+        pop_date_field (str): The name of the date field inthe entity dataframe
         feature_df (DataFrame): The feature dataframe
+        set_date_field (str): The name of the date field in the feature set
+        entity_keys (list[str]): The entity keys
         max_lag (int): The maximum lag to consider
         min_date (str): The minimum date to filter
         max_date (str): The maximum date to filter
@@ -132,41 +181,50 @@ def query_feature_set(
     Returns:
         DataFrame: The dataframe containing the features
     """
-    feature_df = filter_time_window(feature_df, min_date, max_date)
+    feature_df = filter_time_window(feature_df, min_date, max_date, set_date_field)
     if features is not None:
-        feature_df = feature_df.select(features + ["entity_id", "calculation_date"])
-    feature_df = feature_df.sort("entity_id").repartition("entity_id")
-    population_df = population_df.sort("entity_id").repartition("entity_id")
+        feature_df = feature_df.select(features + entity_keys + [set_date_field])
+    feature_df = feature_df.sort(*entity_keys).repartition(*entity_keys)
+    population_df = population_df.sort(*entity_keys).repartition(*entity_keys)
+
+    join_condition = reduce(
+        lambda c1, c2: c1 & c2,
+        [col(f"p.{key}") == col(f"f.{key}") for key in entity_keys],
+    )
 
     joined_df = (
         population_df.alias("p")
         .join(
             feature_df.alias("f"),
-            (col("p.entity_id") == col("f.entity_id"))
-            & (col("p.observation_date") > col("f.calculation_date"))
+            join_condition
+            & (col(f"p.{pop_date_field}") > col(f"f.{set_date_field}"))
             & (
-                datediff(col("p.observation_date"), col("f.calculation_date"))
+                datediff(col(f"p.{pop_date_field}"), col(f"f.{set_date_field}"))
                 <= max_lag
             ),
             how="left",
         )
-        .drop(feature_df.entity_id)
+        .drop(*[col(f"f.{key}") for key in entity_keys])
     )
-
-    window_spec = Window.partitionBy("p.entity_id", "p.observation_date").orderBy(
-        col("f.calculation_date").desc()
+    window_spec = Window.partitionBy(*entity_keys, pop_date_field).orderBy(
+        col(f"f.{set_date_field}").desc()
     )
     ranked_df = joined_df.withColumn("rank", row_number().over(window_spec))
 
-    if mnemonic:
-        ranked_df = add_mnemonic(ranked_df, mnemonic)
+    ranked_df = ranked_df.filter(col("rank") == 1).drop("rank")
 
-    return ranked_df.filter(col("rank") == 1).drop("rank")
+    if mnemonic:
+        ranked_df = add_mnemonic(ranked_df, mnemonic, entity_keys, pop_date_field)
+
+    return ranked_df
 
 
 def query_features(
     population_df: DataFrame,
+    pop_date_field: str,
     feature_dfs: dict[str, DataFrame],
+    set_date_field: str,
+    entity_keys: list[str],
     features: dict[str, list[str]],
 ) -> DataFrame:
     """This function queries a list of feature sets
@@ -178,11 +236,14 @@ def query_features(
     Returns:
         DataFrame: The dataframe containing the features
     """
-    min_date, max_date = get_time_window(population_df, 30)
+    min_date, max_date = get_time_window(population_df, 30, pop_date_field)
     queries = {
         name: query_feature_set(
             population_df,
+            pop_date_field,
             feature_df,
+            set_date_field,
+            entity_keys,
             30,
             min_date,
             max_date,

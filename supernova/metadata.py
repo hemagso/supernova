@@ -137,6 +137,7 @@ class FeatureSet(BaseModel):
     mnemonic: str
     tags: list[str] = Field(default=[])
     entity: Entity
+    date_field: str
     features: list[Feature]
 
     _available_entities: list[Entity]
