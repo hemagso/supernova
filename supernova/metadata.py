@@ -8,8 +8,10 @@ import yaml
 from .query import Query
 from random import choice, uniform
 
+
 class ParquetLogicalTypes(str, Enum):
     """This class represents the logical types of a parquet file"""
+
     STRING = "STRING"
     ENUM = "ENUM"
     UUID = "UUID"
@@ -44,7 +46,7 @@ class ParquetLogicalTypes(str, Enum):
             ParquetLogicalTypes.UINT32,
             ParquetLogicalTypes.UINT64,
         ]
-    
+
     def is_float(self) -> bool:
         return self in [
             ParquetLogicalTypes.DECIMAL,
@@ -68,6 +70,7 @@ class Entity(BaseModel):
         description: A description of the entity.
         keys: A list of the names of the columns that uniquely identify the entity.
     """
+
     name: str
     description: str
     keys: list[str]
@@ -88,6 +91,7 @@ class FeatureStore(BaseModel):
         time_key: The name of the column that contains the timestamp of the data.
         feature_sets: A list of feature sets that are available in the feature store.
     """
+
     entities: list[Entity]
     time_key: str
     feature_sets: list[Annotated[FeatureSet, BeforeValidator(set_feature_set_entity)]]
@@ -107,10 +111,10 @@ class FeatureStore(BaseModel):
                 data["feature_sets"].append(set_data)
 
         return FeatureStore(**data)
-    
+
     def query(self, query: list[str]) -> Query:
         return Query(self, query)
-    
+
     def get_feature_set(self, mnemonic: str) -> FeatureSet:
         feature_set = next(
             filter(lambda s: s.mnemonic == mnemonic, self.feature_sets), None
@@ -152,12 +156,12 @@ class FeatureSet(BaseModel):
         )
         if entity is None:
             raise ValueError(
-                f"Entity {values["entity"]} not found in the store. "
+                f"Entity {values['entity']} not found in the store. "
                 f"Available entities: {[e.name for e in cls._available_entities]}"
             )
         values["entity"] = entity
         return values
-    
+
     def generate_row(self) -> dict[str, float | int | str]:
         return {f.name: f.generate() for f in self.features}
 
@@ -222,8 +226,10 @@ class RangeDomain(BaseModel):
         if start_val > end_val:
             raise ValueError("Start value must be less than or equal to end value")
         return start_val, include_start, end_val, include_end
-    
-    def generate(self, eps: float = 1E-3, inf_proxy: float = 1E5, decimals: int = 2) -> float:
+
+    def generate(
+        self, eps: float = 1e-3, inf_proxy: float = 1e5, decimals: int = 2
+    ) -> float:
         start = self.start if self.start != float("-inf") else -inf_proxy
         end = self.end if self.end != float("inf") else inf_proxy
         if self.include_start:
@@ -231,7 +237,6 @@ class RangeDomain(BaseModel):
         if self.include_end:
             end -= eps
         return round(uniform(start, end), decimals)
-
 
 
 class ValueDomain(BaseModel):
