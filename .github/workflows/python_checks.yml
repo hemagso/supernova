@@ -1,4 +1,4 @@
-name: Python checks
+name: CI
 on:
   push:
     branches:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   flake8:
-    name: Lint
+    name: ubuntu / flake8 / 3.12
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -20,7 +20,7 @@ jobs:
         with:
           plugins: flake8-pyproject
   mypy:
-    name: Type check with mypy
+    name: ubuntu / mypy / 3.12
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -40,7 +40,7 @@ jobs:
       - name: Run mypy
         run: poetry run mypy supernova
   pytest:
-    name: Run tests with pytest
+    name: ubuntu / pytest / 3.12
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
