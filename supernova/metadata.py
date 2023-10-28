@@ -6,6 +6,7 @@ import re
 import pathlib
 import yaml
 from .query import Query
+from random import choice, uniform
 
 class ParquetLogicalTypes(str, Enum):
     """This class represents the logical types of a parquet file"""
@@ -31,6 +32,29 @@ class ParquetLogicalTypes(str, Enum):
     INTERVAL = "INTERVAL"
     JSON = "JSON"
     BSON = "BSON"
+
+    def is_int(self) -> bool:
+        return self in [
+            ParquetLogicalTypes.INT8,
+            ParquetLogicalTypes.INT16,
+            ParquetLogicalTypes.INT32,
+            ParquetLogicalTypes.INT64,
+            ParquetLogicalTypes.UINT8,
+            ParquetLogicalTypes.UINT16,
+            ParquetLogicalTypes.UINT32,
+            ParquetLogicalTypes.UINT64,
+        ]
+    
+    def is_float(self) -> bool:
+        return self in [
+            ParquetLogicalTypes.DECIMAL,
+            ParquetLogicalTypes.TIME_MILLIS,
+            ParquetLogicalTypes.TIME_MICROS,
+            ParquetLogicalTypes.TIME_NANOS,
+            ParquetLogicalTypes.TIMESTAMP_MILLIS,
+            ParquetLogicalTypes.TIMESTAMP_MICROS,
+            ParquetLogicalTypes.TIMESTAMP_NANOS,
+        ]
 
 
 class Entity(BaseModel):
@@ -132,6 +156,12 @@ class FeatureSet(BaseModel):
             )
         values["entity"] = entity
         return values
+    
+    def generate_row(self) -> dict[str, float | int | str]:
+        return {f.name: f.generate() for f in self.features}
+
+    def generate(self, n: int) -> list[dict[str, float | int | str]]:
+        return [self.generate_row() for _ in range(n)]
 
 
 class Feature(BaseModel):
@@ -142,6 +172,14 @@ class Feature(BaseModel):
     type: ParquetLogicalTypes
     tags: list[str] = Field(default=[])
     domain: list[Domain] = Field(default=[])
+
+    def generate(self) -> float | int | str:
+        value = choice(self.domain).generate()
+        if self.type.is_int():
+            return int(value)
+        if self.type.is_float():
+            return float(value)
+        return value
 
 
 class RangeDomain(BaseModel):
@@ -183,22 +221,27 @@ class RangeDomain(BaseModel):
         if start_val > end_val:
             raise ValueError("Start value must be less than or equal to end value")
         return start_val, include_start, end_val, include_end
+    
+    def generate(self, eps: float = 1E-3, inf_proxy: float = 1E5, decimals: int = 2) -> float:
+        start = self.start if self.start != float("-inf") else -inf_proxy
+        end = self.end if self.end != float("inf") else inf_proxy
+        if self.include_start:
+            start += eps
+        if self.include_end:
+            end -= eps
+        return round(uniform(start, end), decimals)
+
 
 
 class ValueDomain(BaseModel):
     """This class represents the metadata for a value domain of a feature"""
 
     type: Literal["VALUE"] = "VALUE"
-    value: float | int
+    value: float | int | str
     description: str
 
-
-class TextDomain(BaseModel):
-    """This class represents the metadata for a text domain of a feature"""
-
-    type: Literal["TEXT"] = "TEXT"
-    value: str
-    description: str
+    def generate(self) -> float | int | str:
+        return self.value
 
 
-Domain = Annotated[RangeDomain | ValueDomain | TextDomain, Field(discriminator="type")]
+Domain = Annotated[RangeDomain | ValueDomain, Field(discriminator="type")]
