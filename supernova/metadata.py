@@ -162,10 +162,10 @@ class FeatureSet(BaseModel):
         values["entity"] = entity
         return values
 
-    def generate_row(self) -> dict[str, float | int | str]:
+    def generate_row(self) -> dict[str, float | int | str | None]:
         return {f.name: f.generate() for f in self.features}
 
-    def generate(self, n: int) -> list[dict[str, float | int | str]]:
+    def generate(self, n: int) -> list[dict[str, float | int | str | None]]:
         return [self.generate_row() for _ in range(n)]
 
 
@@ -178,8 +178,10 @@ class Feature(BaseModel):
     tags: list[str] = Field(default=[])
     domain: list[Domain] = Field(default=[])
 
-    def generate(self) -> float | int | str:
+    def generate(self) -> float | int | str | None:
         value = choice(self.domain).generate()
+        if value is None:
+            return None
         if self.type.is_int():
             return int(value)
         if self.type.is_float():
@@ -250,4 +252,14 @@ class ValueDomain(BaseModel):
         return self.value
 
 
-Domain = Annotated[RangeDomain | ValueDomain, Field(discriminator="type")]
+class NullDomain(BaseModel):
+    """This class represents the metadata for a null domain of a feature"""
+
+    type: Literal["NULL"] = "NULL"
+    description: str
+
+    def generate(self) -> None:
+        return None
+
+
+Domain = Annotated[RangeDomain | ValueDomain | NullDomain, Field(discriminator="type")]
