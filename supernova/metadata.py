@@ -7,6 +7,19 @@ import pathlib
 import yaml
 from .query import Query
 from random import choice, uniform
+from pyspark.sql.types import (
+    DataType,
+    StringType,
+    IntegerType,
+    LongType,
+    FloatType,
+    DoubleType,
+    DecimalType,
+    DateType,
+    TimestampType,
+    ByteType,
+    ShortType,
+)
 
 
 class ParquetLogicalTypes(str, Enum):
@@ -34,6 +47,8 @@ class ParquetLogicalTypes(str, Enum):
     INTERVAL = "INTERVAL"
     JSON = "JSON"
     BSON = "BSON"
+    FLOAT = "FLOAT"
+    DOUBLE = "DOUBLE"
 
     def is_int(self) -> bool:
         return self in [
@@ -56,7 +71,37 @@ class ParquetLogicalTypes(str, Enum):
             ParquetLogicalTypes.TIMESTAMP_MILLIS,
             ParquetLogicalTypes.TIMESTAMP_MICROS,
             ParquetLogicalTypes.TIMESTAMP_NANOS,
+            ParquetLogicalTypes.FLOAT,
+            ParquetLogicalTypes.DOUBLE,
         ]
+
+    def get_spark(self) -> DataType:
+        return {
+            ParquetLogicalTypes.STRING: StringType(),
+            ParquetLogicalTypes.ENUM: StringType(),
+            ParquetLogicalTypes.UUID: StringType(),
+            ParquetLogicalTypes.INT8: ByteType(),
+            ParquetLogicalTypes.INT16: ShortType(),
+            ParquetLogicalTypes.INT32: IntegerType(),
+            ParquetLogicalTypes.INT64: LongType(),
+            ParquetLogicalTypes.UINT8: ByteType(),
+            ParquetLogicalTypes.UINT16: ShortType(),
+            ParquetLogicalTypes.UINT32: IntegerType(),
+            ParquetLogicalTypes.UINT64: LongType(),
+            ParquetLogicalTypes.DECIMAL: DecimalType(),  # Todo: Add precision and scale
+            ParquetLogicalTypes.DATE: DateType(),
+            ParquetLogicalTypes.TIME_MILLIS: IntegerType(),
+            ParquetLogicalTypes.TIME_MICROS: LongType(),
+            ParquetLogicalTypes.TIME_NANOS: LongType(),
+            ParquetLogicalTypes.TIMESTAMP_MILLIS: TimestampType(),
+            ParquetLogicalTypes.TIMESTAMP_MICROS: TimestampType(),
+            ParquetLogicalTypes.TIMESTAMP_NANOS: TimestampType(),
+            ParquetLogicalTypes.INTERVAL: StringType(),
+            ParquetLogicalTypes.JSON: StringType(),
+            ParquetLogicalTypes.BSON: StringType(),
+            ParquetLogicalTypes.FLOAT: FloatType(),
+            ParquetLogicalTypes.DOUBLE: DoubleType(),
+        }[self]
 
 
 class Entity(BaseModel):
@@ -93,7 +138,6 @@ class FeatureStore(BaseModel):
     """
 
     entities: list[Entity]
-    time_key: str
     feature_sets: list[Annotated[FeatureSet, BeforeValidator(set_feature_set_entity)]]
 
     @staticmethod
@@ -255,7 +299,7 @@ class ValueDomain(BaseModel):
 class NullDomain(BaseModel):
     """This class represents the metadata for a null domain of a feature"""
 
-    type: Literal["NULL"] = "NULL"
+    type: Literal["MISSING"] = "MISSING"
     description: str
 
     def generate(self) -> None:
