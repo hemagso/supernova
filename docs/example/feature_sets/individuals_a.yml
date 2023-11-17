@@ -1,13 +1,15 @@
-name: bacen
-description: Feature set containing data related to debt
-mnemonic: bci
-path: data/parquet/feature_a_df
+name: Individuals Feature Set A
+description: Feature Set containing data about individuals for topic A
+mnemonic: ifsa
+path: data/parquet/individuals_a
 entity: individual
 date_field: calculation_date
+tags:
+  - weekly
 features:
   - name: feature_a
     description: Average monthly revolving debt in the last 6 months
-    type: DECIMAL
+    type: DOUBLE
     domain: 
       - type: RANGE
         value: "(0, +inf]"
@@ -17,7 +19,7 @@ features:
         description: Customer don't have any revolving debt
   - name: feature_b
     description: Average monthly revolving debt in the last 3 months
-    type: DECIMAL
+    type: DOUBLE
     domain: 
       - type: RANGE
         value: "(0, +inf]"
@@ -34,4 +36,16 @@ features:
         description: Number of months
       - type: VALUE
         value: -1
+        description: Customer don't have any revolving debt
+  - name: feature_d
+    description: Indicator on revolving debt usage
+    type: UINT8
+    domain:
+      - type: VALUE
+        value: 0
+        description: Customer don't have any revolving debt
+      - type: VALUE
+        value: 1
+        description: Customer have revolving debt
+      - type: MISSING
         description: Customer don't have any revolving debt

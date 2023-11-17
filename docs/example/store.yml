@@ -1,15 +1,14 @@
 entities:
   - name: individual
-    description: Entity representing a natural person or corporation
+    description: Entity representing a natural person or company
     keys:
-      - entity_id
+      - customer_id
   - name: account
-    description: An account within the bank
+    description: Entity representing an account within the company
     keys:
-      - pk_branchid_xx
-      - pk_accountid_xx
+      - branch_id
+      - account_id
   - name: conglomerate
     description: A conglomerate of companies
     keys:
-      - pk_conglomerateid_xx
-time_key: pk_datref_xx
+      - conglomerate_id
