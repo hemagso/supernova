@@ -51,20 +51,19 @@ class Query:
         )
 
     def execute(
-        self, spark: SparkSession, pop_path: str, pop_date_field: str
+        self, spark: SparkSession, entity_df: DataFrame, pop_date_field: str
     ) -> DataFrame:
         # Loading all dataframes
-        population_df = spark.read.parquet(pop_path)
         feature_dfs = {
             feature_set.mnemonic: spark.read.parquet(feature_set.path)
             for feature_set, _ in self.specs
         }
 
         # Getting time range
-        min_date, max_date = get_time_window(population_df, 30, pop_date_field)
+        min_date, max_date = get_time_window(entity_df, 30, pop_date_field)  # Todo: Variable max lag
         queries = {
-            name: query_feature_set(
-                population_df,
+            feature_set: query_feature_set(
+                entity_df,
                 pop_date_field,
                 feature_df,
                 feature_set.date_field,
@@ -80,10 +79,11 @@ class Query:
             )
         }
 
-        all_dfs = [population_df] + list(queries.values())
-        return reduce(
-            lambda df1, df2: df1.join(df2, on=["entity_id", pop_date_field]), all_dfs
-        )
+        result = entity_df
+        for feature_set, df in queries.items():
+            result = result.join(df, on=feature_set.entity.keys + [pop_date_field])
+
+        return result
 
 
 def filter_time_window(
