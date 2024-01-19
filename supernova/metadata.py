@@ -20,7 +20,10 @@ from pyspark.sql.types import (
     ByteType,
     ShortType,
 )
-
+from pyspark.sql import functions as F 
+from pyspark.sql.column import Column
+from functools import reduce
+import warnings
 
 class ParquetLogicalTypes(str, Enum):
     """This class represents the logical types of a parquet file"""
@@ -231,6 +234,13 @@ class Feature(BaseModel):
         if self.type.is_float():
             return float(value)
         return value
+    
+    def get_validator_expr(self, mnemonic: str) -> Column:
+        if len(self.domain) == 0:
+            warnings.warn(f"Feature {mnemonic + ':' + self.name} has no registered domain. All values will be valid.")
+            return F.lit(True) 
+        expressions = [domain.get_validator_expr(mnemonic + "_" + self.name) for domain in self.domain]
+        return reduce(lambda a, b: a | b, expressions)
 
 
 class RangeDomain(BaseModel):
@@ -284,6 +294,22 @@ class RangeDomain(BaseModel):
             end -= eps
         return round(uniform(start, end), decimals)
 
+    def get_validator_expr(self, feature_name: str) -> Column:
+        conditions = []
+
+        if self.start != float("-inf"):
+            if self.include_start:
+                conditions.append(F.col(feature_name) >= self.start)
+            else:
+                conditions.append(F.col(feature_name) > self.start)
+        
+        if self.end != float("inf"):
+            if self.include_end:
+                conditions.append(F.col(feature_name) <= self.end)
+            else:
+                conditions.append(F.col(feature_name) < self.end)
+
+        return reduce(lambda a, b: a & b, conditions)
 
 class ValueDomain(BaseModel):
     """This class represents the metadata for a value domain of a feature"""
@@ -295,6 +321,8 @@ class ValueDomain(BaseModel):
     def generate(self) -> float | int | str:
         return self.value
 
+    def get_validator_expr(self, feature_name: str) -> Column:
+        return F.col(feature_name) == F.lit(self.value)
 
 class NullDomain(BaseModel):
     """This class represents the metadata for a null domain of a feature"""
@@ -304,6 +332,9 @@ class NullDomain(BaseModel):
 
     def generate(self) -> None:
         return None
+
+    def get_validator_expr(self, feature_name: str) -> Column:
+        return F.col(feature_name).isNull()
 
 
 Domain = Annotated[RangeDomain | ValueDomain | NullDomain, Field(discriminator="type")]
