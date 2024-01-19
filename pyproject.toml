@@ -18,6 +18,7 @@ pytest = "^7.4.3"
 mypy = "^1.6.1"
 flake8 = "^6.1.0"
 flake8-pyproject = "^1.2.3"
+devtools = "^0.12.2"
 
 [build-system]
 requires = ["poetry-core"]
