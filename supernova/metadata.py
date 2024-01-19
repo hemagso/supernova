@@ -252,6 +252,7 @@ class RangeDomain(BaseModel):
     end: float | int
     include_end: bool = Field(default=True)
     description: str
+    special: bool = Field(default=False)
 
     def __init__(self, **data):
         (
@@ -317,6 +318,7 @@ class ValueDomain(BaseModel):
     type: Literal["VALUE"] = "VALUE"
     value: float | int | str
     description: str
+    special: bool = Field(default=False)
 
     def generate(self) -> float | int | str:
         return self.value
@@ -329,6 +331,7 @@ class NullDomain(BaseModel):
 
     type: Literal["MISSING"] = "MISSING"
     description: str
+    special: bool = Field(default=True)
 
     def generate(self) -> None:
         return None

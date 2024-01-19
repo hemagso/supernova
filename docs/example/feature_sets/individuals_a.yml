@@ -17,6 +17,7 @@ features:
       - type: VALUE
         value: -1
         description: Customer don't have any revolving debt
+        special: True
   - name: feature_b
     description: Average monthly revolving debt in the last 3 months
     type: DOUBLE
@@ -27,6 +28,7 @@ features:
       - type: VALUE
         value: -1
         description: Customer don't have any revolving debt
+        special: True
   - name: feature_c
     description: Number of months that the revolving debt exceeded 50% of the customer's income over the last 6 months
     type: UINT8
@@ -37,6 +39,7 @@ features:
       - type: VALUE
         value: -1
         description: Customer don't have any revolving debt
+        special: True
   - name: feature_d
     description: Indicator on revolving debt usage
     type: UINT8
