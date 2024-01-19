@@ -250,6 +250,23 @@ class Feature(BaseModel):
         expressions = [domain.get_validator_expr(mnemonic + "_" + self.name) for domain in self.domain]
         return reduce(lambda a, b: a | b, expressions)
 
+    def get_special_values_expr(self, mnemonic: str) -> Column:
+        expressions = [domain.get_validator_expr(mnemonic + "_" + self.name) for domain in self.domain if domain.special]
+        if len(expressions) == 0:
+            return F.lit(False)
+        return reduce(lambda a, b: a | b, expressions)
+
+    def get_special_values_str_expr(self, mnemonic: str) -> Column:
+        values = [(domain.get_validator_expr(mnemonic + "_" + self.name), F.lit(str(domain))) for domain in self.domain if domain.special]
+        when_chain = None
+        for condition, domain_repr in values:
+            if when_chain is None:
+                when_chain = F.when(condition, domain_repr)
+            else:
+                when_chain = when_chain.when(condition, domain_repr)
+        if when_chain is None:
+            return F.lit("Not special")
+        return when_chain.otherwise(F.lit("Not special"))
 
 class RangeDomain(BaseModel):
     """This class represents the metadata for a range domain of a feature"""
@@ -320,6 +337,11 @@ class RangeDomain(BaseModel):
 
         return reduce(lambda a, b: a & b, conditions)
 
+    def __str__(self) -> str:
+        start = "[" if self.include_start else "("
+        end = "]" if self.include_end else ")"
+        return f"{start}{self.start}, {self.end}{end}"
+
 class ValueDomain(BaseModel):
     """This class represents the metadata for a value domain of a feature"""
 
@@ -334,6 +356,9 @@ class ValueDomain(BaseModel):
     def get_validator_expr(self, feature_name: str) -> Column:
         return F.col(feature_name) == F.lit(self.value)
 
+    def __str__(self) -> str:
+        return str(self.value)
+
 class NullDomain(BaseModel):
     """This class represents the metadata for a null domain of a feature"""
 
@@ -346,6 +371,9 @@ class NullDomain(BaseModel):
 
     def get_validator_expr(self, feature_name: str) -> Column:
         return F.col(feature_name).isNull()
+
+    def __str__(self) -> str:
+        return "Missing"
 
 
 Domain = Annotated[RangeDomain | ValueDomain | NullDomain, Field(discriminator="type")]
