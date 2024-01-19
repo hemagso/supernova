@@ -25,6 +25,13 @@ from pyspark.sql.column import Column
 from functools import reduce
 import warnings
 
+
+class FeatureMeasurementLevel(str, Enum):
+    INTERVAL = "INTERVAL"
+    ORDINAL = "ORDINAL"
+    NOMINAL = "NOMINAL"
+
+
 class ParquetLogicalTypes(str, Enum):
     """This class represents the logical types of a parquet file"""
 
@@ -224,6 +231,7 @@ class Feature(BaseModel):
     type: ParquetLogicalTypes
     tags: list[str] = Field(default=[])
     domain: list[Domain] = Field(default=[])
+    measurement_level: FeatureMeasurementLevel = Field(default=FeatureMeasurementLevel.INTERVAL)
 
     def generate(self) -> float | int | str | None:
         value = choice(self.domain).generate()

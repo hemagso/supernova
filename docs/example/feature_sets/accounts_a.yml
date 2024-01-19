@@ -8,6 +8,7 @@ features:
   - name: feature_a
     description: Average monthly revolving debt in the last 6 months
     type: DOUBLE
+    measurement_level: INTERVAL
     domain: 
       - type: RANGE
         value: "(0, +inf]"

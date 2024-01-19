@@ -10,6 +10,7 @@ features:
   - name: feature_a
     description: Average monthly revolving debt in the last 6 months
     type: DOUBLE
+    measurement_level: INTERVAL
     domain: 
       - type: RANGE
         value: "(0, +inf]"
@@ -21,6 +22,7 @@ features:
   - name: feature_b
     description: Average monthly revolving debt in the last 3 months
     type: DOUBLE
+    measurement_level: INTERVAL
     domain: 
       - type: RANGE
         value: "(0, +inf]"
@@ -32,6 +34,7 @@ features:
   - name: feature_c
     description: Number of months that the revolving debt exceeded 50% of the customer's income over the last 6 months
     type: UINT8
+    measurement_level: ORDINAL
     domain:
       - type: RANGE
         value: "[0, 6]"
@@ -43,6 +46,7 @@ features:
   - name: feature_d
     description: Indicator on revolving debt usage
     type: UINT8
+    measurement_level: NOMINAL
     domain:
       - type: VALUE
         value: 0
